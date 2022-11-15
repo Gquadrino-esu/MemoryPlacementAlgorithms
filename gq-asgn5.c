@@ -1,0 +1,464 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <limits.h>
+
+// Struct to hold free memory blocks and processes
+typedef struct linkedListNode {
+	char *name;
+	int size;
+	struct linkedListNode *next;
+	struct linkedListNode *prev;
+} node;
+
+node *head, *lastAccessed;
+int numNodes = 1;
+
+// Iterates through the linked list, starting at the head and continuing until it finds 
+// the first block of memory large enough to hold the new process
+void placeFirst(char *name, int size) {
+	node *temp = head;
+	for (int i = 0; i < numNodes; i++) {
+		// Searches for a free block of memory
+		if (strcmp(temp->name, "Free") == 0) {
+			// If the free memory is larger than needed, 
+			// the remainder of free memory after allocating for the process is left over
+			if (temp->size > size) {
+				// The new node is created
+				node *newNode = malloc(sizeof(node));
+				newNode->name = name;
+				newNode->size = size;
+				temp->size -= size;
+				
+				newNode->prev = temp->prev;	// The node before this free memory is now the node before the new process
+				temp->prev->next = newNode;	// The new process is now in front of the node behind the free memory
+				newNode->next = temp;		// The new process is now behind the remaining free memory
+				temp->prev = newNode;		// The remaining free memory is now in front of the new process
+				
+				numNodes++;
+				// If the free memory was the head, the new process is now the head
+				if (i == 0) {
+					head = newNode;
+				}
+				return;
+			}
+			// If the free memory is exactly what is needed,
+			// then it is simply replaced by the new process
+			else if (temp->size == size) {
+				// The new node is created
+				node *newNode = malloc(sizeof(node));
+				newNode->name = name;
+				newNode->size = size;
+				
+				newNode->prev = temp->prev;	// The node before this free memory is now the node before the new process
+				temp->prev->next = newNode;	// The new process is now in front of the node behind the free memory
+				temp->next->prev = newNode;	// The new process is now behind the node in front of the free memory
+				newNode->next = temp->next;	// The new process is now behind the node in front of the free memory
+				
+				free(temp);	// The free memory is now deleted
+				// If the free memory was the head, the new process is now the head
+				if (i == 0) {
+					head = newNode;
+				}
+				return;
+			}
+		}
+		// If space wasn't found, continue to check
+		temp = temp->next;
+	}
+	
+	printf("Error: Could not find memory block that fits.\n");
+}
+
+// Searches the linked list for the smallest block of memory 
+// that is big enough to hold the new process
+void placeBest(char *name, int size) {
+	node *temp = head;
+	int smallestSize = INT_MAX;
+	// First for loop finds the smallest block of memory that can hold the new process
+	for (int i = 0; i < numNodes; i++) {
+		
+		if (strcmp(temp->name, "Free") == 0 && size <= temp->size && smallestSize > temp->size) {
+			smallestSize = temp->size;
+		}
+		temp = temp->next;
+	}
+	
+	// There was no free memory block that could fit the process
+	if (smallestSize == INT_MAX) {
+		printf("Error: Could not find memory block that fits.\n");
+		return;
+	}
+	
+	// Second for loop to get back to the memory block
+	for (int i = 0; i < numNodes; i++) {
+		
+		if (strcmp(temp->name, "Free") == 0 && smallestSize == temp->size) {
+			// If the free memory is larger than needed, 
+			// the remainder of free memory after allocating for the process is left over
+			if (temp->size > size) {
+				// The new node is created
+				node *newNode = malloc(sizeof(node));
+				newNode->name = name;
+				newNode->size = size;
+				temp->size -= size;
+				
+				newNode->prev = temp->prev;	// The node before this free memory is now the node before the new process
+				temp->prev->next = newNode;	// The new process is now in front of the node behind the free memory
+				newNode->next = temp;		// The new process is now behind the remaining free memory
+				temp->prev = newNode;		// The remaining free memory is now in front of the new process
+				
+				numNodes++;
+				// If the free memory was the head, the new process is now the head
+				if (i == 0) {
+					head = newNode;
+				}
+				return;
+			}
+			// If the free memory is exactly what is needed,
+			// then it is simply replaced by the new process
+			else if (temp->size == size) {
+				// The new node is created
+				node *newNode = malloc(sizeof(node));
+				newNode->name = name;
+				newNode->size = size;
+				
+				newNode->prev = temp->prev;	// The node before this free memory is now the node before the new process
+				temp->prev->next = newNode;	// The new process is now in front of the node behind the free memory
+				temp->next->prev = newNode;	// The new process is now behind the node in front of the free memory
+				newNode->next = temp->next;	// The new process is now behind the node in front of the free memory
+				
+				free(temp);	// The free memory is now deleted	
+				// If the free memory was the head, the new process is now the head
+				if (i == 0) {
+					head = newNode;
+				}
+				return;
+			}
+		}
+		
+		// If space wasn't found, continue to check
+		temp = temp->next;
+	}
+}
+
+// Iterates through the linked list, starting at the last accessed node and continuing until it finds 
+// the first block of memory large enough to hold the new process
+void placeNext(char *name, int size) {
+	node *temp = lastAccessed;
+	for (int i = 0; i < numNodes; i++) {
+		// Searches for a free block of memory
+		if (strcmp(temp->name, "Free") == 0) {
+			// If the free memory is larger than needed, 
+			// the remainder of free memory after allocating for the process is left over
+			if (temp->size > size) {
+				// The new node is created
+				node *newNode = malloc(sizeof(node));
+				newNode->name = name;
+				newNode->size = size;
+				temp->size -= size;
+				
+				newNode->prev = temp->prev;	// The node before this free memory is now the node before the new process
+				temp->prev->next = newNode;	// The new process is now in front of the node behind the free memory
+				temp->next->prev = newNode;	// The new process is now behind the node in front of the free memory
+				newNode->next = temp;		// The new process is now behind the remaining free memory
+				temp->prev = newNode;		// The remaining free memory is now in front of the new process
+				
+				numNodes++;
+				lastAccessed = newNode;
+				return;
+			}
+			// If the free memory is exactly what is needed,
+			// then it is simply replaced by the new process
+			else if (temp->size == size) {
+				// The new node is created
+				node *newNode = malloc(sizeof(node));
+				newNode->name = name;
+				newNode->size = size;
+				
+				newNode->prev = temp->prev;	// The node before this free memory is now the node before the new process
+				temp->prev->next = newNode;	// The new process is now in front of the node behind the free memory
+				newNode->next = temp->next;	// The new process is now behind the node in front of the free memory
+				
+				free(temp);	// The free memory is now deleted
+				
+				lastAccessed = newNode;
+				return;
+			}
+		}
+		// If space wasn't found, continue to check
+		temp = temp->next;
+	}
+	
+	printf("Error: Could not find memory block that fits.\n");
+}
+
+// Frees a process from memory, merging adjacent free blocks if possible
+void release(char *name) {
+	node *temp = head;
+	bool done = false;
+	for (int i = 0; i < numNodes; i++) {
+		// Tests if the process was found
+		if (strcmp(temp->name, name) == 0) {
+			// Releases the process
+			temp->name = "Free";
+			while (!done) {
+				done = true;
+				// If the next node is free memory, merge it with the current node
+				if (i != numNodes - 1 && strcmp(temp->next->name, "Free") == 0) {
+					temp->size += temp->next->size;
+					
+					// Set the new next node's previous to this node
+					temp->next->next->prev = temp;
+					
+					// Set the next node to the new next node
+					temp->next = temp->next->next;
+					
+					numNodes--;
+					done = false;
+				}
+				// If the previous node is free memory, merge it with the current node
+				if (i != 0 && strcmp(temp->prev->name, "Free") == 0) {
+					temp->size += temp->prev->size;
+					
+					// Set the new previous node's next to this node
+					temp->prev->prev->next = temp;
+					
+					// Set the previous node to the new previous node
+					temp->prev = temp->prev->prev;
+					
+					// If the previous node was the head, this node is now the head
+					if (i == 1) {
+						head = temp;
+					}
+					
+					i--;
+					numNodes--;
+					done = false;
+				}
+			}
+			return;
+		}
+		// If the process wasn't found, continue to check
+		temp = temp->next;
+	}
+	
+	printf("Error: Could not find process.\n");
+}
+
+// Frees a process from memory, merging adjacent free blocks if possible
+// This version of the method is used with the Next fit algorithm,
+// where the head doesn't matter because of the lastAccessed node
+// NOTE: The main reason for another method is because, in a true circular linked list,
+// the first free memory block and the last free memory block would merge together,
+// whereas when using the First fit and Best fit algorithms, 
+// the first free memory block and the last free memory block don't merge together
+void releaseNext(char *name) {
+	node *temp = lastAccessed;
+	bool done = false;
+	for (int i = 0; i < numNodes; i++) {
+		// Tests if the process was found
+		if (strcmp(temp->name, name) == 0) {
+			// Releases the process
+			temp->name = "Free";
+			while (!done) {
+				done = true;
+				// If the next node is free memory, merge it with the current node
+				if (strcmp(temp->next->name, "Free") == 0) {
+					temp->size += temp->next->size;
+					
+					// Set the new next node's previous to this node
+					temp->next->next->prev = temp;
+					
+					// Set the next node to the new next node
+					temp->next = temp->next->next;
+					
+					numNodes--;
+					done = false;
+				}
+				// If the previous node is free memory, merge it with the current node
+				if (strcmp(temp->prev->name, "Free") == 0) {
+					temp->size += temp->prev->size;
+					
+					// Set the new previous node's next to this node
+					temp->prev->prev->next = temp;
+					
+					// Set the previous node to the new previous node
+					temp->prev = temp->prev->prev;
+					
+					numNodes--;
+					done = false;
+				}
+			}
+			lastAccessed = temp;
+			return;
+		}
+		// If the process wasn't found, continue to check
+		temp = temp->next;
+	}
+	
+	printf("Error: Could not find process.\n");
+}
+
+// Adds a node to the end of the linked list
+node* addNode(node *current, char *name, int size) {
+	node *newNode = malloc(sizeof(node));
+	newNode->name = name;
+	newNode->size = size;
+	newNode->prev = current;
+	current->next = newNode;
+	numNodes++;
+	return newNode;
+}
+
+// Prints the data of each node in the linked list
+void print() {
+	node *temp = head;
+	for (int i = 0; i < numNodes; i++) {
+		printf("Current node name is %s and size is %d\n", temp->name, temp->size);
+		temp = temp->next;
+	}
+	printf("\n");
+}
+
+// Prints the data of each node in the linked list
+// This version of the method is used with the Next fit algorithm,
+// where the head doesn't matter because of the lastAccessed node
+void printNext() {
+	node *temp = lastAccessed;
+	for (int i = 0; i < numNodes; i++) {
+		printf("Current node name is %s and size is %d\n", temp->name, temp->size);
+		temp = temp->next;
+	}
+	printf("\n");
+}
+
+int main(void) {
+	// Initializes the head and the head's next node
+	head = malloc(sizeof(node));
+	head->name = "Free";
+	head->size = 1;
+	addNode(head, "A", 4);
+	node *temp = head->next;
+	
+	// Initializes the rest of the linked list
+	temp = addNode(temp, "Free", 2);
+	temp = addNode(temp, "B", 1);
+	temp = addNode(temp, "Free", 2);
+	temp = addNode(temp, "C", 5);
+	temp = addNode(temp, "Free", 1);
+	temp = addNode(temp, "D", 8);
+	temp = addNode(temp, "Free", 2);
+	temp = addNode(temp, "E", 2);
+	temp = addNode(temp, "Free", 1);
+	temp = addNode(temp, "F", 4);
+	temp = addNode(temp, "Free", 2);
+	temp = addNode(temp, "G", 3);
+	temp = addNode(temp, "Free", 5);
+	
+	// Sets the final node's next to be the head, and the head's prev to the final node
+	temp->next = head;
+	head->prev = temp;
+	
+	print();
+	
+	// User input on which algorithm to choose
+	int userfit;
+	printf("Enter 1 for first fit, 2 for best fit, or 3 for next fit:\n");
+	scanf("%d", &userfit);
+	// User didn't enter valid number
+	while (userfit != 1 && userfit != 2 && userfit != 3) {
+		printf("Please try again.\n");
+		scanf("%d", &userfit);
+	}
+	
+	// User picked First fit
+	if (userfit == 1) {
+		release("A");
+		printf("Just released A\n");
+		print();
+		
+		placeFirst("H", 5);
+		printf("Just placed 5M in H\n");
+		print();
+		
+		placeFirst("I", 2);
+		printf("Just placed 2M in I\n");
+		print();
+		
+		release("C");
+		printf("Just released C\n");
+		print();
+		
+		placeFirst("J", 6);
+		printf("Just placed 6M in J\n");
+		print();
+		
+		placeFirst("K", 4);
+		printf("Just placed 4M in K\n");
+		print();
+		
+		printf("\nUser selected first fit.");
+	}
+	// User picked Best fit
+	if (userfit == 2) {
+		release("A");
+		printf("Just released A\n");
+		print();
+		
+		placeBest("H", 5);
+		printf("Just placed 5M in H\n");
+		print();
+		
+		placeBest("I", 2);
+		printf("Just placed 2M in I\n");
+		print();
+		
+		release("C");
+		printf("Just released C\n");
+		print();
+		
+		placeBest("J", 6);
+		printf("Just placed 6M in J\n");
+		print();
+		
+		placeBest("K", 4);
+		printf("Just placed 4M in K\n");
+		print();
+		
+		printf("\nUser selected best fit.");
+	}
+	// User picked Next fit
+	else if (userfit == 3) {
+		lastAccessed = head;
+		
+		releaseNext("A");
+		printf("Just released A\n");
+		printNext();
+		
+		placeNext("H", 5);
+		printf("Just placed 5M in H\n");
+		printNext();
+		
+		placeNext("I", 2);
+		printf("Just placed 2M in I\n");
+		printNext();
+		
+		releaseNext("C");
+		printf("Just released C\n");
+		printNext();
+		
+		placeNext("J", 6);
+		printf("Just placed 6M in J\n");
+		printNext();
+		
+		placeNext("K", 4);
+		printf("Just placed 4M in K\n");
+		printNext();
+		
+		printf("\nUser selected next fit.");
+	}
+	
+	exit(0);
+}
